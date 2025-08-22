@@ -1,0 +1,205 @@
+# HyperAI Builder - Docker Compose Configuration
+# Complete application stack with all services
+
+version: '3.8'
+
+services:
+  # Frontend (Streamlit)
+  frontend:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8501:8501"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://hyperai:password@postgres:5432/hyperai_builder
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+      - postgres
+      - redis
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: .
+      target: production
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://hyperai:password@postgres:5432/hyperai_builder
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-super-secret-key-here-make-it-at-least-32-characters-long
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=hyperai_builder
+      - POSTGRES_USER=hyperai
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hyperai -d hyperai_builder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Celery Worker (Background Tasks)
+  worker:
+    build:
+      context: .
+      target: production
+    command: celery -A hyperai_builder.backend.core.celery worker --loglevel=info
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://hyperai:password@postgres:5432/hyperai_builder
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://:password@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:password@redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+
+  # Celery Beat (Scheduled Tasks)
+  beat:
+    build:
+      context: .
+      target: production
+    command: celery -A hyperai_builder.backend.core.celery beat --loglevel=info
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://hyperai:password@postgres:5432/hyperai_builder
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://:password@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:password@redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./deploy/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Monitoring (Prometheus + Grafana)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/grafana:/etc/grafana/provisioning
+    networks:
+      - hyperai-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  hyperai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

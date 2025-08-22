@@ -1,0 +1,97 @@
+[tool.poetry]
+name = "hyperai-builder"
+version = "1.0.0"
+description = "Ultra-advanced AI App Builder for creating professional-grade applications"
+authors = ["HyperAI Team <team@hyperai.com>"]
+readme = "README.md"
+packages = [{include = "hyperai_builder"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+streamlit = "^1.28.0"
+fastapi = "^0.104.0"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = "^2.5.0"
+sqlalchemy = "^2.0.23"
+alembic = "^1.12.1"
+celery = "^5.3.4"
+redis = "^5.0.1"
+langchain = "^0.0.350"
+langchain-openai = "^0.0.2"
+langchain-anthropic = "^0.0.2"
+langchain-google-genai = "^0.0.2"
+openai = "^1.3.0"
+anthropic = "^0.7.0"
+google-generativeai = "^0.3.0"
+python-multipart = "^0.0.6"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-dotenv = "^1.0.0"
+httpx = "^0.25.0"
+jinja2 = "^3.1.2"
+mermaid-cli = "^0.1.0"
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+black = "^23.11.0"
+flake8 = "^6.1.0"
+mypy = "^1.7.1"
+loguru = "^0.7.2"
+psycopg2-binary = "^2.9.9"
+sqlite3 = "^3.35.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.12.0"
+black = "^23.11.0"
+flake8 = "^6.1.0"
+mypy = "^1.7.1"
+pre-commit = "^3.5.0"
+
+[tool.poetry.scripts]
+hyperai-builder = "hyperai_builder.frontend.app:main"
+hyperai-api = "hyperai_builder.backend.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=hyperai_builder --cov-report=html --cov-report=term-missing"
+asyncio_mode = "auto"
