@@ -1,0 +1,61 @@
+[tool.poetry]
+name = "hyperai-builder"
+version = "0.1.0"
+description = "HyperAI Builder - Ultra-advanced AI App Builder (Streamlit + FastAPI)"
+authors = ["Your Name <you@example.com>"]
+readme = "docs/README.md"
+packages = [
+  { include = "backend" },
+  { include = "frontend" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "0.112.0"
+uvicorn = { version = "0.30.5", extras = ["standard"] }
+pydantic = "2.9.1"
+pydantic-settings = "2.5.2"
+SQLAlchemy = "2.0.32"
+alembic = "1.13.2"
+asyncpg = "0.29.0"
+aiosqlite = "0.20.0"
+passlib = { version = "1.7.4", extras = ["bcrypt"] }
+PyJWT = "2.9.0"
+python-multipart = "0.0.9"
+loguru = "0.7.2"
+python-dotenv = "1.0.1"
+httpx = "0.27.0"
+requests = "2.32.3"
+celery = "5.4.0"
+redis = "5.0.7"
+streamlit = "1.37.1"
+streamlit-extras = "0.4.3"
+streamlit-mermaid = "0.1.0"
+openai = "1.40.0"
+anthropic = "0.34.2"
+google-generativeai = "0.7.2"
+langchain = "0.2.12"
+cryptography = "43.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.3.2"
+pytest-asyncio = "0.23.8"
+black = "24.8.0"
+flake8 = "7.1.1"
+mypy = "1.11.1"
+coverage = "7.6.1"
+bandit = "1.7.9"
+
+[tool.black]
+line-length = 88
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
